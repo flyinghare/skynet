@@ -151,4 +151,68 @@ function httpd.write_response(...)
 	return pcall(writeall, ...)
 end
 
+
+--[[
+
+ htmlua 脚本中内置支持的函数：
+	echo ：基本的输出函数
+
+ 用户 可在 生成 HTML 页面时传入 自定义的 对象或函数
+ 在 htmlua 脚本中用 类似如下的代码 接收：
+ 	local xx1,xx2,xx3 = ...
+
+ 返回值：一个 函数，执行次函数 即可生成 HTML 页面
+--]]
+function httpd.parse_htmlua(file)
+	local f = io.open(file,"r")
+	if not f then
+		return nil
+	end
+
+	local text = f:read("a")
+	if not text then
+		f:close()
+		return nil
+	end
+	f:close()
+
+	-- 脚本序列
+	local htmlua_script = {}
+	table.insert(htmlua_script," local html_result={} local echo = function(str) table.insert(html_result,s) end ")
+
+	-- 收集脚本
+	local pos = 1
+	while true do
+		local openpos,openend = text:find("<?lua",pos,true)
+		if openpos then
+
+			-- 插入 html
+			table.insert(htmlua_script," echo([[" .. text:sub(pos,openpos-1) .. "]]) ")
+
+			-- 插入脚本
+			local closepos,closeend = text:find("?>",openend,true)
+			if closepos then
+				table.insert(htmlua_script,text:sub(openend+1,closepos-1))
+				pos = closeend + 1
+			else
+				table.insert(htmlua_script," echo(\"<br/>web script bracket '<?lua' not closed! <br/>\") ")
+
+				break	-- 出错，退出
+			end
+		else
+			-- 插入 html
+			table.insert(htmlua_script," echo([[" .. text:sub(pos,text:len()) .. "]]) ")
+
+			break
+		end
+	end
+
+	-- 语句块 中的函数结束
+	table.insert(htmlua_script," return table.concat(html_result) ")
+
+	-- 返回载入的脚本
+	return load(table.concat(htmlua_script))
+
+end
+
 return httpd
