@@ -1,0 +1,35 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title></title>
+</head>
+
+<body>
+<?lua
+	-- 得到环境变量（由测试代码中的 "pcall(script,url, header)" 传入！！）
+	local code, header = ...
+?>
+
+<h3><strong>web 服务嵌入 lua 脚本测试</strong></h3>
+
+
+<h2>
+  <p>code：</p></h2>
+<?lua
+	echo ("<p>&nbsp &nbsp" .. code .. "</p>")
+?>
+
+<h2><p>header：</p></h2>
+
+<?lua
+	for k,v in pairs(header) do
+?>
+<p>&nbsp &nbsp<?lua echo(k) ?>= <?lua echo(v) ?> </p>
+
+<?lua
+	end
+?>
+
+</body>
+</html>

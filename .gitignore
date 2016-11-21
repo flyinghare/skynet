@@ -9,3 +9,4 @@
 *.so
 *.dSYM
 .DS_Store
+.idea/

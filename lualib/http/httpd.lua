@@ -154,64 +154,63 @@ end
 
 --[[
 
- htmlua 脚本中内置支持的函数：
-	echo ：基本的输出函数
+ 功能：处理 html 嵌入的 lua 脚本
+ 说明：
+	1、脚本中用内置函数 echo 输出 html 内容。
+	2、可以向脚本中传入自定义数据，例如：
 
- 用户 可在 生成 HTML 页面时传入 自定义的 对象或函数
- 在 htmlua 脚本中用 类似如下的代码 接收：
- 	local xx1,xx2,xx3 = ...
+	执行脚本时传入：
+		local chunk = httpd.parse_htmlua(htmlua)
+		chunk(var1,var2,var3)
 
- 返回值：一个 函数，执行次函数 即可生成 HTML 页面
+	脚本中访问：
+		<?lua
+ 			local var1,var2,var3 = ...
+ 			( 其它逻辑代码 )
+ 		?>
+
+ 返回值1：load 加载的代码块（chunk），执行即可生成 HTML 页面；出错 返回 nil
+ 返回值2：如果 出错，返回错误信息
+
 --]]
-function httpd.parse_htmlua(file)
-	local f = io.open(file,"r")
-	if not f then
-		return nil
-	end
-
-	local text = f:read("a")
-	if not text then
-		f:close()
-		return nil
-	end
-	f:close()
+function httpd.parse_htmlua(htmlua)
 
 	-- 脚本序列
-	local htmlua_script = {}
-	table.insert(htmlua_script," local html_result={} local echo = function(str) table.insert(html_result,s) end ")
+	local script = {}
+	table.insert(script," local html={} local echo = function(s) table.insert(html,tostring(s)) end ")
 
 	-- 收集脚本
 	local pos = 1
 	while true do
-		local openpos,openend = text:find("<?lua",pos,true)
+		local openpos,openend = htmlua:find("<?lua",pos,true)
 		if openpos then
 
 			-- 插入 html
-			table.insert(htmlua_script," echo([[" .. text:sub(pos,openpos-1) .. "]]) ")
+			table.insert(script," echo([=[" .. htmlua:sub(pos,openpos-1) .. "]=]) ")
 
 			-- 插入脚本
-			local closepos,closeend = text:find("?>",openend,true)
+			local closepos,closeend = htmlua:find("?>",openend,true)
 			if closepos then
-				table.insert(htmlua_script,text:sub(openend+1,closepos-1))
+				table.insert(script,htmlua:sub(openend+1,closepos-1))
 				pos = closeend + 1
 			else
-				table.insert(htmlua_script," echo(\"<br/>web script bracket '<?lua' not closed! <br/>\") ")
+				table.insert(script," echo(\"<br/>web script bracket '<?lua' not closed! <br/>\") ")
 
 				break	-- 出错，退出
 			end
 		else
 			-- 插入 html
-			table.insert(htmlua_script," echo([[" .. text:sub(pos,text:len()) .. "]]) ")
+			table.insert(script," echo([=[" .. htmlua:sub(pos,htmlua:len()) .. "]=]) ")
 
 			break
 		end
 	end
 
 	-- 语句块 中的函数结束
-	table.insert(htmlua_script," return table.concat(html_result) ")
+	table.insert(script," return table.concat(html) ")
 
 	-- 返回载入的脚本
-	return load(table.concat(htmlua_script))
+	return load(table.concat(script))
 
 end
 
