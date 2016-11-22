@@ -6,7 +6,7 @@
 </head>
 
 <body>
-<?lua
+<?
 	-- 得到环境变量（由测试代码中的 "pcall(script,url, header)" 传入！！）
 	local code, header = ...
 ?>
@@ -16,18 +16,18 @@
 
 <h2>
   <p>code：</p></h2>
-<?lua
+<?
 	echo ("<p>&nbsp &nbsp" .. code .. "</p>")
 ?>
 
 <h2><p>header：</p></h2>
 
-<?lua
+<?
 	for k,v in pairs(header) do
 ?>
-<p>&nbsp &nbsp<?lua echo(k) ?>= <?lua echo(v) ?> </p>
+<p>&nbsp &nbsp<? echo(k) ?>= <? echo(v) ?> </p>
 
-<?lua
+<?
 	end
 ?>
 

@@ -164,7 +164,7 @@ end
 		chunk(var1,var2,var3)
 
 	脚本中访问：
-		<?lua
+		<?
  			local var1,var2,var3 = ...
  			( 其它逻辑代码 )
  		?>
@@ -182,7 +182,7 @@ function httpd.parse_htmlua(htmlua)
 	-- 收集脚本
 	local pos = 1
 	while true do
-		local openpos,openend = htmlua:find("<?lua",pos,true)
+		local openpos,openend = htmlua:find("<?",pos,true)
 		if openpos then
 
 			-- 插入 html
@@ -194,7 +194,7 @@ function httpd.parse_htmlua(htmlua)
 				table.insert(script,htmlua:sub(openend+1,closepos-1))
 				pos = closeend + 1
 			else
-				table.insert(script," echo(\"<br/>web script bracket '<?lua' not closed! <br/>\") ")
+				table.insert(script," echo(\"<br/>web script bracket '<?' not closed! <br/>\") ")
 
 				break	-- 出错，退出
 			end

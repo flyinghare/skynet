@@ -9,6 +9,7 @@ skynet.start(function()
 	if not skynet.getenv "daemon" then
 		local console = skynet.newservice("console")
 	end
+	skynet.newservice("simple_htmlua")
 	skynet.newservice("debug_console",8000)
 	skynet.newservice("simpledb")
 	local watchdog = skynet.newservice("watchdog")
