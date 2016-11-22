@@ -155,44 +155,52 @@ end
 --[[
 
  功能：处理 html 嵌入的 lua 脚本
+ 参数：
+ 	fileloader ：文件查找、加载函数，参数：file,curdir
+ 	rootdir ：web文件根路径，计算重定向路径时需要；必须以 "/" 结尾
+ 	file,url,header,body : 请求的相关信息
  说明：
-	1、脚本中用内置函数 echo 输出 html 内容。
-	2、可以向脚本中传入自定义数据，例如：
+	1、脚本中支持的内置函数/功能：
+	 	echo(xxxx) ： 输出 html 内容。
+		return url ：重定向页面
+	2、脚本中支持的内置对象
+	 	request ：可访问本次请求的相关数据
 
-	执行脚本时传入：
-		local chunk = httpd.parse_htmlua(htmlua)
-		chunk(var1,var2,var3)
-
-	脚本中访问：
-		<?
- 			local var1,var2,var3 = ...
- 			( 其它逻辑代码 )
- 		?>
-
- 返回值1：load 加载的代码块（chunk），执行即可生成 HTML 页面；出错 返回 nil
- 返回值2：如果 出错，返回错误信息
+ 返回值：正常，返回 200 和 页面内容；错误，返回错误号 和错误信息
 
 --]]
-function httpd.parse_htmlua(htmlua)
+function httpd.parse_htmlua(fileloader,file,url,header,body)
+
+	-- 读取文件
+	local htmlua = fileloader(file)
+	if not htmlua then return 404,"file '" .. file .. "' not found!" end
+
+	-- html 解析结果
+	local html = {}
+
+	-- 脚本中要用到的函数
+	local function echo(s)
+		table.insert(html,tostring(s))
+	end
 
 	-- 脚本序列
 	local script = {}
-	table.insert(script," local html={} local echo = function(s) table.insert(html,tostring(s)) end ")
+	table.insert(script," local echo, redirect, request = ... ")
 
 	-- 收集脚本
 	local pos = 1
 	while true do
-		local openpos,openend = htmlua:find("<?",pos,true)
+		local openpos = htmlua:find("<?",pos,true)
 		if openpos then
 
 			-- 插入 html
 			table.insert(script," echo([=[" .. htmlua:sub(pos,openpos-1) .. "]=]) ")
 
 			-- 插入脚本
-			local closepos,closeend = htmlua:find("?>",openend,true)
+			local closepos = htmlua:find("?>",openpos + 1,true)
 			if closepos then
-				table.insert(script,htmlua:sub(openend+1,closepos-1))
-				pos = closeend + 1
+				table.insert(script,htmlua:sub(openpos+2,closepos-1))
+				pos = closepos+2
 			else
 				table.insert(script," echo(\"<br/>web script bracket '<?' not closed! <br/>\") ")
 
@@ -206,12 +214,28 @@ function httpd.parse_htmlua(htmlua)
 		end
 	end
 
-	-- 语句块 中的函数结束
-	table.insert(script," return table.concat(html) ")
-
 	-- 返回载入的脚本
-	return load(table.concat(script))
+	local chunk,err = load(table.concat(script))
+	if not chunk then
+		return 500,"load script error:" .. err
+	end
 
+	local ok,refile = pcall(chunk,echo,redirect,{url=url,header=header,body=body})
+	if not ok then
+		return 500,"run script error:" .. ret
+	end
+
+	-- 重定向
+	if refile then
+		if refile[1] == "/" then
+			ddd
+			return httpd.parse_htmlua(fileloader,refile,url,header,body)
+		else
+			return httpd.parse_htmlua(rootdir, file:sub(1,string.find(file,"[^/\\]$")) .. refile,url,header,body)
+		end
+	end
+
+	return 200,table.concat(html)
 end
 
 return httpd
