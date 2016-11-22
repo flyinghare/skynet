@@ -164,7 +164,7 @@ end
 		chunk(var1,var2,var3)
 
 	脚本中访问：
-		<?lua
+		<?
  			local var1,var2,var3 = ...
  			( 其它逻辑代码 )
  		?>
