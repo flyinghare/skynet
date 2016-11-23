@@ -31,10 +31,30 @@ local function readhtmlfile(path)
 	local f = io.open(realpath,"r")
 	if not f then return nil end
 
-	html = f:read("a")
+	local html = f:read("a")
 	f:close()
 
 	return html
+end
+
+local function parse_request(url, method, header, body)
+	local path, query = urllib.parse(url)
+	local file_content = readhtmlfile(path)
+	if file_content then
+
+		local request = {url=url,method=method,header=header,body=body }
+		if "POST" == method then
+			request.post = urllib.parse_query(body)
+		elseif "GET" == method then
+			request.get = urllib.parse_query(query)
+		end
+
+		return httpd.parse_htmlua(file_content,{},request,function(reurl)
+			return parse_request(reurl, method, header, body)
+		end)
+	else
+		return 404, "file '" .. path .. "' not found!"
+	end
 end
 
 skynet.start(function()
@@ -46,29 +66,8 @@ skynet.start(function()
 			if code ~= 200 then
 				response(id, code)
 			else
-
 				-- 其它代码 拷贝 自 simpleweb.lua ，除了这里 :)
-				local path, query = urllib.parse(url)
-				local html = readhtmlfile(path)
-				if html then
-					local script,error = httpd.parse_htmlua(html)
-					if script then
-						-- 作为示例，将 code, header 传入到脚本中
-						-- 你可以 传其它任何变量供 htmlua 脚本使用
-						-- 脚本中这样访问： local var1,var2 = ...
-						local ok,html_result = pcall(script,code, header)
-						if ok then
-							response(id, code, html_result)
-						else
-							response(id, code, "call script error:\n" .. html_result)
-						end
-					else
-						response(id, code, "load script error:\n" .. error)
-					end
-				else
-					response(id, code, "file '" .. path .. "' not found bb!")
-				end
-
+				response(id, parse_request(url, method, header, body))
 			end
 		else
 			if url == sockethelper.socket_error then

@@ -15,19 +15,26 @@
 
 
 <h2>
-  <p>code：</p></h2>
+  <p>url：</p></h2>
 <?
-	echo ("<p>&nbsp &nbsp" .. code .. "</p>")
+	echo ("<p>&nbsp &nbsp" .. request.url .. "</p>")
 ?>
 
 <h2><p>header：</p></h2>
 
 <?
-	for k,v in pairs(header) do
+	for k,v in pairs(request.header) do
 ?>
 <p>&nbsp &nbsp<? echo(k) ?>= <? echo(v) ?> </p>
 
 <?
+	end
+
+	if not request.get or not request.get.redirect then
+		print("redirected!!!")
+		return "/?redirect=true"
+	else
+		print(request.url)
 	end
 ?>
 

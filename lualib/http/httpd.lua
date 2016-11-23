@@ -152,13 +152,15 @@ function httpd.write_response(...)
 end
 
 
+
 --[[
 
  功能：处理 html 嵌入的 lua 脚本
  参数：
- 	fileloader ：文件查找、加载函数，参数：file,curdir
- 	rootdir ：web文件根路径，计算重定向路径时需要；必须以 "/" 结尾
- 	file,url,header,body : 请求的相关信息
+ 	htmlua ：脚本文件内容
+ 	host ：主机的相关信息
+ 	request : 请求的相关信息
+ 	redirect ：函数，重定向时调用
  说明：
 	1、脚本中支持的内置函数/功能：
 	 	echo(xxxx) ： 输出 html 内容。
@@ -169,11 +171,7 @@ end
  返回值：正常，返回 200 和 页面内容；错误，返回错误号 和错误信息
 
 --]]
-function httpd.parse_htmlua(fileloader,file,url,header,body)
-
-	-- 读取文件
-	local htmlua = fileloader(file)
-	if not htmlua then return 404,"file '" .. file .. "' not found!" end
+function httpd.parse_htmlua(htmlua,host,request,redirect)
 
 	-- html 解析结果
 	local html = {}
@@ -185,7 +183,7 @@ function httpd.parse_htmlua(fileloader,file,url,header,body)
 
 	-- 脚本序列
 	local script = {}
-	table.insert(script," local echo, redirect, request = ... ")
+	table.insert(script," local echo, host,request = ... ")
 
 	-- 收集脚本
 	local pos = 1
@@ -220,18 +218,21 @@ function httpd.parse_htmlua(fileloader,file,url,header,body)
 		return 500,"load script error:" .. err
 	end
 
-	local ok,refile = pcall(chunk,echo,redirect,{url=url,header=header,body=body})
+	local ok,reurl = pcall(chunk,echo,host,request)
 	if not ok then
-		return 500,"run script error:" .. ret
+		return 500,"run script error:" .. reurl
 	end
 
 	-- 重定向
-	if refile then
-		if refile[1] == "/" then
-			ddd
-			return httpd.parse_htmlua(fileloader,refile,url,header,body)
+	if reurl then
+		if redirect then
+			if "string" == type(reurl) then
+				return redirect(reurl)
+			else
+				return 500,"redirect url type mast be string!"
+			end
 		else
-			return httpd.parse_htmlua(rootdir, file:sub(1,string.find(file,"[^/\\]$")) .. refile,url,header,body)
+			return 500,"server does not support redirect!"
 		end
 	end
 
